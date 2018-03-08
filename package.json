@@ -1,0 +1,11 @@
+{
+  "name": "cordova-qdc-baidu-location",
+  "version": "1.0.0",
+  "description": "本插件利用百度地图提供的定位功能进行Android版手机定位。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -1,5 +1,10 @@
 package com.qdc.plugins.baidu;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.widget.Toast;
+
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.LOG;
@@ -14,10 +19,12 @@ import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
 import com.baidu.location.LocationClientOption.LocationMode;
 
+import java.util.ArrayList;
+
 /**
- * 百度云推送插件
+ * 百度定位插件
  *
- * @author mrwutong
+ * @author mrwutong modify by liangzhenghui 2017/12/11
  *
  */
 public class BaiduLocation extends CordovaPlugin {
@@ -30,6 +37,8 @@ public class BaiduLocation extends CordovaPlugin {
 
     /** 百度定位客户端 */
     public LocationClient mLocationClient = null;
+
+    public int REQUEST_CODE = 127;
 
     /** 百度定位监听 */
     public BDLocationListener myListener = new BDLocationListener() {
@@ -108,26 +117,14 @@ public class BaiduLocation extends CordovaPlugin {
                     sb.append("无法获取有效定位依据导致定位失败，一般是由于手机的原因，处于飞行模式下一般会造成这种结果，可以试着重启手机");
                     json.put("describe", "无法获取有效定位依据导致定位失败，一般是由于手机的原因，处于飞行模式下一般会造成这种结果，可以试着重启手机");
                 }
-    //            sb.append("\nlocationdescribe : ");
-    //            sb.append(location.getLocationDescribe());// 位置语义化信息
-    //            List<Poi> list = location.getPoiList();// POI数据
-    //            if (list != null) {
-    //                sb.append("\npoilist size = : ");
-    //                sb.append(list.size());
-    //                for (Poi p : list) {
-    //                    sb.append("\npoi= : ");
-    //                    sb.append(p.getId() + " " + p.getName() + " " + p.getRank());
-    //                }
-    //            }
                 LOG.i(LOG_TAG, sb.toString());
 
-                PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, sb.toString());
+                PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, json);
                 pluginResult.setKeepCallback(true);
                 cbCtx.sendPluginResult(pluginResult);
             } catch (JSONException e) {
                 String errMsg = e.getMessage();
                 LOG.e(LOG_TAG, errMsg, e);
-
                 PluginResult pluginResult = new PluginResult(PluginResult.Status.ERROR, errMsg);
                 pluginResult.setKeepCallback(true);
                 cbCtx.sendPluginResult(pluginResult);
@@ -142,30 +139,36 @@ public class BaiduLocation extends CordovaPlugin {
      */
     @Override
     public boolean execute(String action, final JSONArray args, CallbackContext callbackContext) throws JSONException {
-        LOG.d(LOG_TAG, "BaiduPush#execute");
+        LOG.d(LOG_TAG, "BaiduLocation#execute");
 
         boolean ret = false;
-
         if ("getCurrentPosition".equalsIgnoreCase(action)) {
             cbCtx = callbackContext;
-
-            PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
-            pluginResult.setKeepCallback(true);
-            cbCtx.sendPluginResult(pluginResult);
-
-            if (mLocationClient == null) {
-                mLocationClient = new LocationClient(this.webView.getContext());
-                mLocationClient.registerLocationListener(myListener);
-
-                // 配置定位SDK参数
-                initLocation();
+            //Android M对权限管理系统进行了改版，之前我们的App需要权限，只需在manifest中申明即可，用户安装后，一切申明的权限都可来去自如的使用。但是Android M把权限管理做了加强处理，在manifest申明了，在使用到相关功能时，还需重新授权方可使用
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+                if(!this.hasPermisssion()){
+                    this.requestPermissions(REQUEST_CODE);
+                }else{
+                    getLocation();
+                }
+            }else{
+                getLocation();
             }
-
-            mLocationClient.start();
             ret = true;
         }
 
         return ret;
+    }
+
+    public void getLocation(){
+        if (mLocationClient == null) {
+            mLocationClient = new LocationClient(this.webView.getContext());
+            mLocationClient.registerLocationListener(myListener);
+
+            // 配置定位SDK参数
+            initLocation();
+        }
+        mLocationClient.start();
     }
 
     /**
@@ -199,5 +202,36 @@ public class BaiduLocation extends CordovaPlugin {
         // 可选，默认false，设置是否需要过滤gps仿真结果，默认需要
         // option.setEnableSimulateGps(false);
         mLocationClient.setLocOption(option);
+    }
+    public void requestPermissions(int requestCode) {
+        ArrayList<String> permissionsToRequire = new ArrayList<String>();
+        if (!cordova.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION))
+            permissionsToRequire.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+        if (!cordova.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION))
+            permissionsToRequire.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        String[] _permissionsToRequire = new String[permissionsToRequire.size()];
+        _permissionsToRequire = permissionsToRequire.toArray(_permissionsToRequire);
+        cordova.requestPermissions(this, REQUEST_CODE, _permissionsToRequire);
+    }
+
+    @Override
+    public boolean hasPermisssion() {
+        return cordova.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION) && cordova.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION);
+    }
+
+    @Override
+    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) throws JSONException {
+        if (cbCtx == null || requestCode != REQUEST_CODE)
+            return;
+        for (int r : grantResults) {
+            if (r == PackageManager.PERMISSION_DENIED) {
+                LOG.i("requestPermission", "---请求权限失败==");
+                PluginResult pluginResult = new PluginResult(PluginResult.Status.ERROR, "定位权限没开启,功能没法使用");
+                pluginResult.setKeepCallback(true);
+                cbCtx.sendPluginResult(pluginResult);
+                return;
+            }
+        }
+        getLocation();
     }
 }

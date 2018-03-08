@@ -1,10 +1,10 @@
 2017-12-11因为项目需要,又对插件进行了修改，修正了android6+权限带来的问题以及添加package.json文件解决cordova高版本导致无法安装的问题
-转自 https://github.com/liangzhenghui/cordova-qdc-baidu-location
+
 
 
 安装方式如下  
 
-cordova plugin add https://github.com/liangzhenghui/cordova-qdc-baidu-location --variable API_KEY="你的百度key"
+D:\liangzhenghui\testcordova>cordova plugin add https://github.com/liangzhenghui/cordova-qdc-baidu-location --variable API_KEY="你的百度key"
 
 
 
@@ -19,7 +19,7 @@ cordova plugin add https://github.com/liangzhenghui/cordova-qdc-baidu-location -
 cordova plugin add D:\cordovademo\cordova-qdc-baidu-location-master --variable API_KEY="你的百度key"
 
 
-D:\cordovademo\cordova-qdc-baidu-location-master是插件所在在的根目录
+D:\cordovademo\cordova-qdc-baidu-location-master是我插件所在在的根目录
 
 
 
@@ -52,5 +52,7 @@ baidu_location.getCurrentPosition(function(data){
                 
                 
                 
+                打赏可以点击我头像支付
+           
                 
                 
